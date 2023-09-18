@@ -1,7 +1,13 @@
-﻿using System.Text.Json;
-
+using System;
+using System.Text.Json;
+using Microsoft.Win32;
+using Umbraco.Cms.Core;
 using Umbraco.Cms.Core.Models;
+using Umbraco.Cms.Core.Models.PublishedContent;
 using Umbraco.Cms.Core.Services;
+using Umbraco.Cms.Infrastructure;
+using Umbraco.Extensions;
+using static System.Net.Mime.MediaTypeNames;
 
 namespace Umbraco.Cms.Integrations.Search.Algolia.Services
 {
@@ -11,15 +17,19 @@ namespace Umbraco.Cms.Integrations.Search.Algolia.Services
 
         private readonly IMediaService _mediaService;
 
-        public AlgoliaSearchPropertyIndexValueFactory(IDataTypeService dataTypeService, IMediaService mediaService)
+        private readonly IContentService _contentService;
+
+        public AlgoliaSearchPropertyIndexValueFactory(IDataTypeService dataTypeService, IMediaService mediaService, IContentService contentService)
         {
             _dataTypeService = dataTypeService;
-
             _mediaService = mediaService;
+            _contentService = contentService;
 
             Converters = new Dictionary<string, Func<KeyValuePair<string, IEnumerable<object>>, string>>
             {
-                {  Core.Constants.PropertyEditors.Aliases.MediaPicker3, ConvertMediaPicker }
+                { Core.Constants.PropertyEditors.Aliases.MediaPicker3, ConvertMediaPicker }, // Register the converter for Media picker
+                { Core.Constants.PropertyEditors.Aliases.MultiNodeTreePicker, ConvertMultiNodeTreePicker }, // Register the converter for MultiNodeTreePicker
+                { Core.Constants.PropertyEditors.Aliases.Tags, ConvertTagsPicker } // Register the converter for Tag picker
             };
         }
 
@@ -86,5 +96,44 @@ namespace Umbraco.Cms.Integrations.Search.Algolia.Services
 
             return JsonSerializer.Serialize(list);
         }
+
+        private string ConvertMultiNodeTreePicker(KeyValuePair<string, IEnumerable<object>> indexValue)
+        {
+            var list = new List<string>();
+            string[] resultIDs;
+            var parsedIndexValue = ParseIndexValue(indexValue.Value);
+
+            if (!String.IsNullOrEmpty(parsedIndexValue))
+            {
+                resultIDs = parsedIndexValue.ToString().Split(",");
+                if (resultIDs.Length > 0)
+                {
+                    foreach (var udiAsString in resultIDs)
+                    {
+                        var udiSubString = udiAsString.Substring(udiAsString.Length - 32);
+                        var guid = Guid.ParseExact(udiSubString, "N");
+                        var node = _contentService.GetById(guid);
+                        if (node!=null)
+                        {
+                            list.Add(node.Name);
+                        }
+
+                    }
+                }
+            }
+
+            return string.Join(",", list);
+
+        }
+
+        public String ConvertTagsPicker(KeyValuePair<string, IEnumerable<object>> indexValue)
+        {
+            var list = new List<string>();
+            IEnumerable<object> tagsList = indexValue.Value;
+            string concatenatedTags = string.Join(",", tagsList.Select(obj => obj.ToString()));
+
+            return concatenatedTags;
+        }
+
     }
 }
