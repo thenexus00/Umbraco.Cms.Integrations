@@ -1,4 +1,4 @@
-﻿using System.Text.Json.Serialization;
+using System.Text.Json.Serialization;
 
 namespace Umbraco.Cms.Integrations.Search.Algolia.Models
 {
@@ -33,6 +33,9 @@ namespace Umbraco.Cms.Integrations.Search.Algolia.Models
 
         public string Url { get; set; }
 
+        public string AbsoluteUrl { get; set; }
+
         public Dictionary<string, string> Data { get; set; }
+
     }
 }
