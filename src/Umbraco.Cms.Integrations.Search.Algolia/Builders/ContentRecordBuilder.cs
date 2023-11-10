@@ -1,4 +1,4 @@
-﻿using Umbraco.Cms.Core.Models;
+using Umbraco.Cms.Core.Models;
 using Umbraco.Cms.Core.Models.PublishedContent;
 using Umbraco.Cms.Core.Routing;
 using Umbraco.Cms.Core.Services;
@@ -46,7 +46,9 @@ namespace Umbraco.Cms.Integrations.Search.Algolia.Builders
             _record.Level = content.Level;
             _record.Path = content.Path;
             _record.ContentTypeAlias = content.ContentType.Alias;
-            _record.Url = _urlProvider.GetUrl(content.Id);
+            _record.Url = _urlProvider.GetUrl(content.Id, mode: UrlMode.Relative);
+            _record.AbsoluteUrl = _urlProvider.GetUrl(content.Id, mode: UrlMode.Absolute);
+
 
             if (content.PublishedCultures.Count() > 0)
             {
@@ -68,12 +70,16 @@ namespace Umbraco.Cms.Integrations.Search.Algolia.Builders
                         {
                             var indexValue = _algoliaSearchPropertyIndexValueFactory.GetValue(property, culture);
                             _record.Data.Add($"{indexValue.Key}-{culture}", indexValue.Value);
+                            //((IDictionary<string, object>)_record).Add(property.Alias, indexValue.Value);
+
                         }
                     }
                     else
                     {
                         var indexValue = _algoliaSearchPropertyIndexValueFactory.GetValue(property, string.Empty);
                         _record.Data.Add(indexValue.Key, indexValue.Value);
+                        //((IDictionary<string, object>)_record).Add(property.Alias, indexValue.Value);
+
                     }
 
                 }
